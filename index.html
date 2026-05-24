@@ -31,20 +31,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 1.5rem;
+            padding: 1rem;
         }
 
         header {
             width: 100%;
             max-width: 650px;
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
+            padding-bottom: 1rem;
         }
 
         h1 {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 800;
             letter-spacing: -0.025em;
             color: var(--text-main);
@@ -52,7 +52,7 @@
         }
 
         .subtitle {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
             font-weight: 500;
         }
@@ -62,7 +62,7 @@
             max-width: 650px;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .progress-bar {
@@ -77,11 +77,13 @@
             border: 1px solid var(--border);
         }
 
+        /* FIXED: Removed fixed height, using dynamic flex layouts for rotation stability */
         .flashcard-wrapper {
             perspective: 1000px;
             width: 100%;
-            height: 380px;
+            min-height: 420px;
             cursor: pointer;
+            display: grid;
         }
 
         .flashcard {
@@ -91,6 +93,7 @@
             transform-style: preserve-3d;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 20px;
+            display: grid;
         }
 
         .flashcard-wrapper.flipped .flashcard {
@@ -98,17 +101,18 @@
         }
 
         .card-face {
-            position: absolute;
+            position: relative;
+            grid-area: 1 / 1 / 2 / 2;
             width: 100%;
-            height: 100%;
+            min-height: 420px;
             backface-visibility: hidden;
             border-radius: 20px;
-            padding: 2rem;
+            padding: 1.75rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             border: 2px solid var(--border);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
         .card-front {
@@ -126,6 +130,7 @@
             justify-content: space-between;
             align-items: center;
             width: 100%;
+            margin-bottom: 1rem;
         }
 
         .tag {
@@ -149,43 +154,51 @@
             letter-spacing: 0.05em;
         }
 
+        /* FIXED: Allowed text block to expand freely and push down footer notes */
         .card-content {
-            font-size: 1.2rem;
-            line-height: 1.6;
+            font-size: 1.15rem;
+            line-height: 1.55;
             font-weight: 500;
             text-align: left;
-            overflow-y: auto;
-            margin: 1rem 0;
-            padding-right: 0.5rem;
+            margin-bottom: 1.5rem;
+            color: #f1f5f9;
         }
 
         .card-back .card-content {
             font-size: 1.05rem;
-            color: #f1f5f9;
+        }
+
+        .card-footer-note {
+            font-size: 0.75rem; 
+            color: var(--text-muted); 
+            font-weight: 500;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 0.75rem;
+            margin-top: auto;
         }
 
         .nav-layout {
             display: grid;
             grid-template-columns: 1fr 1.5fr 1fr;
             align-items: center;
-            gap: 1rem;
+            gap: 0.75rem;
             width: 100%;
+            margin-top: 0.5rem;
         }
 
         button {
             background-color: var(--card-bg);
             color: var(--text-main);
             border: 1px solid var(--border);
-            padding: 0.85rem 1rem;
+            padding: 0.85rem 0.5rem;
             border-radius: 14px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
         }
 
         button:hover:not(:disabled) {
@@ -215,15 +228,13 @@
             border-radius: 20px;
             border: 1px solid var(--border);
         }
-
-        .status-msg p { color: var(--text-muted); margin-bottom: 1rem; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1 id="app-title">Conditioning Dashboard</h1>
-        <div class="subtitle" id="app-subtitle">Syncing with active database...</div>
+        <h1 id="app-title">Conditioning Routine</h1>
+        <div class="subtitle" id="app-subtitle">Syncing with database...</div>
     </header>
 
     <div class="container">
@@ -252,20 +263,15 @@
         const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/pub?output=csv';
         const EXAM_DATE = new Date('2026-06-06T00:00:00');
 
-        // State Machine
         let masterDeck = [];
         let currentCardIndex = 0;
         let activeCycleDay = 1;
 
-        // Diagnostic Date Engine
         function calculateTargetCycleDay() {
             const now = new Date();
-            // Anchor start point to local time parameters
             const anchorDate = new Date('2026-05-24T00:00:00'); 
             const diffTime = now - anchorDate;
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            // Map incrementally. Default to Day 1 if accessing prematurely.
             return diffDays >= 0 ? diffDays + 1 : 1;
         }
 
@@ -284,7 +290,6 @@
             }
         }
 
-        // CSV String Parser
         function parseCSV(text) {
             const lines = [];
             let row = [""];
@@ -311,7 +316,6 @@
             return lines;
         }
 
-        // App Initializer
         async function fetchAndBuildDeck() {
             updateGlobalMetadata();
             activeCycleDay = calculateTargetCycleDay();
@@ -329,7 +333,6 @@
                 
                 if (cleanRows.length <= 1) throw new Error("Database returned an empty dataset.");
 
-                // Map row structure safely
                 const headers = cleanRows[0].map(h => h.trim().toLowerCase());
                 const dayIdx = headers.indexOf('day');
                 const domainIdx = headers.indexOf('domain');
@@ -353,10 +356,8 @@
                     });
                 }
 
-                // Filter data to only display items corresponding to current tracking increment
                 masterDeck = parsedCards.filter(c => c.day === activeCycleDay);
 
-                // Fallback loop logic if database contains fewer structural rows than expected
                 if (masterDeck.length === 0 && parsedCards.length > 0) {
                     const maxAvailableDay = Math.max(...parsedCards.map(c => c.day));
                     const loopedDay = ((activeCycleDay - 1) % maxAvailableDay) + 1;
@@ -379,13 +380,11 @@
                     <div class="status-msg">
                         <h3 style="margin-bottom:0.5rem; color:var(--accent-eng)">Handshake Delayed</h3>
                         <p>${err.message}</p>
-                        <p style="font-size:0.85rem; margin-top:1rem;">Verify that your runtime link points to a published Comma-Separated Values (.csv) document.</p>
                     </div>
                 `;
             }
         }
 
-        // Render Interface Elements
         function renderCard() {
             const viewport = document.getElementById('deck-viewport');
             const card = masterDeck[currentCardIndex];
@@ -403,7 +402,7 @@
                                 <span class="hint-text">Tap to evaluate</span>
                             </div>
                             <div class="card-content">${card.front}</div>
-                            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">Focus Objective: Build conceptual speed & isolate traps.</div>
+                            <div class="card-footer-note">Objective: Build conceptual processing speed & isolate traps.</div>
                         </div>
                         <div class="card-face card-back">
                             <div class="card-meta">
@@ -411,13 +410,12 @@
                                 <span class="hint-text">Strategy Engine</span>
                             </div>
                             <div class="card-content">${card.back}</div>
-                            <div style="font-size:0.75rem; color:var(--primary); font-weight:600; text-transform:uppercase;">Execution Checked &bull; Tap to Flip</div>
+                            <div class="card-footer-note" style="color: var(--primary);">Execution Verified &bull; Tap to flip back</div>
                         </div>
                     </div>
                 </div>
             `;
 
-            // Adjust navigation control configurations
             document.getElementById('card-index-label').innerText = `Card ${currentCardIndex + 1} of ${masterDeck.length}`;
             document.getElementById('prev-btn').disabled = currentCardIndex === 0;
             document.getElementById('next-btn').disabled = currentCardIndex === masterDeck.length - 1;
@@ -425,7 +423,6 @@
             resetFlipState();
         }
 
-        // Flip Controls
         function toggleCardFlip() {
             const wrapper = document.getElementById('card-wrapper');
             if (!wrapper) return;
@@ -444,7 +441,6 @@
             document.getElementById('flip-btn').innerText = "Reveal Strategy";
         }
 
-        // Event Handling Attachments
         document.getElementById('prev-btn').addEventListener('click', () => {
             if (currentCardIndex > 0) {
                 currentCardIndex--;
@@ -460,8 +456,6 @@
         });
 
         document.getElementById('flip-btn').addEventListener('click', toggleCardFlip);
-
-        // Execute Engine on initialization
         window.addEventListener('DOMContentLoaded', fetchAndBuildDeck);
     </script>
 </body>
