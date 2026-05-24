@@ -1,135 +1,468 @@
-<!DOCTYPE html>  
-<html lang="en">  
-<head>  
-    <meta charset="UTF-8">  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-    <title>SAT Core - Daily Practice </title>  
-    <script src="https://cdn.tailwindcss.com"></script>  
-    <style>  
-        .perspective-1000 { perspective: 1000px; }  
-        .transform-style-3d { transform-style: preserve-3d; }  
-        .backface-hidden { backface-visibility: hidden; }  
-        .rotate-y-180 { transform: rotateY(180deg); }  
-    </style>  
-</head>  
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">  
-      
-    <header class="text-center mb-8">  
-        <h1 class="text-3xl font-extrabold tracking-tight text-indigo-400">SAT CORE</h1>  
-        <p class="text-sm text-slate-400 mt-1">Targeted Skill Conditioning</p>  
-    </header>  
-  
-    <main class="w-full max-w-md flex flex-col items-center">  
-        <div id="flashcard" class="w-full h-80 perspective-1000 cursor-pointer group">  
-            <div id="card-inner" class="w-full h-full transform-style-3d transition-transform duration-500 relative bg-slate-800 rounded-2xl shadow-xl border border-slate-700">  
-                  
-                <div class="absolute inset-0 backface-hidden p-6 flex flex-col justify-between">  
-                    <div>  
-                        <span id="card-domain" class="text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-950/50 px-2.5 py-1 rounded-full border border-indigo-900">Domain</span>  
-                        <p id="card-front-text" class="text-base font-medium mt-6 text-slate-200 leading-relaxed"></p>  
-                    </div>  
-                    <div class="text-center text-xs text-slate-500 font-medium">Tap card to reveal answer</div>  
-                </div>  
-                  
-                <div class="absolute inset-0 backface-hidden rotate-y-180 p-6 flex flex-col justify-between bg-slate-800 rounded-2xl border border-slate-700">  
-                    <div>  
-                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-900">Strategy & Answer</span>  
-                        <p id="card-back-text" class="text-sm mt-6 text-slate-300 whitespace-pre-line leading-relaxed"></p>  
-                    </div>  
-                    <div class="text-center text-xs text-indigo-400 font-semibold">Tap to flip back</div>  
-                </div>  
-  
-            </div>  
-        </div>  
-  
-        <div class="flex items-center justify-between w-full mt-8 px-2">  
-            <button id="prev-btn" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 transition text-sm font-semibold rounded-xl border border-slate-700 text-slate-300 disabled:opacity-40">  
-                Previous  
-            </button>  
-            <span id="card-indicator" class="text-sm font-medium text-slate-400"></span>  
-            <button id="next-btn" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition text-sm font-semibold rounded-xl text-white shadow-lg disabled:opacity-40">  
-                Next Card  
-            </button>  
-        </div>  
-    </main>  
-  
-    <script>  
-        const cards = [  
-          {  
-            "domain": "Reading: Information & Ideas",  
-            "front": "A researcher claims that high urban population density does not inherently decrease community cohesion, provided that accessible public green spaces are readily available.\n\nWhat specific type of finding must textual or data evidence present to strongly support this hypothesis?",  
-            "back": "The evidence must show a high-density urban area with abundant green spaces maintaining high or stable cohesion levels (matching or exceeding low-density spaces).\n\nStrategy: Beware of trap answers that show green spaces are highly utilized but fail to measure the community cohesion variable itself."  
-          },  
-          {  
-            "domain": "Math: Algebra",  
-            "front": "For a system of linear equations (two lines), what algebraic conditions must be true for the system to have exactly Zero Solutions?",  
-            "back": "Slopes must be identical, but y-intercepts must be different (parallel lines that never intersect).\n\nStrategy: The SAT constantly tests this conceptually using constants (e.g., finding 'k' such that a system has no solution). Simply set the slopes equal to each other!"  
-          },  
-          {  
-            "domain": "Reading: Information & Ideas",  
-            "front": "When handling structural 'Inference' text questions, what is the safest rule of thumb to avoid picking a tempting high-level trap answer?",  
-            "back": "The correct inference is always the most immediate, uncreative logical next step of the text's explicit premises.\n\nStrategy: If an answer choice requires you to assume an extra 'outside-the-text' step or uses extreme language (all, never, exclusively) that isn't explicitly supported, it is a trap."  
-          },  
-          {  
-            "domain": "Math: Data Analysis",  
-            "front": "If an extreme outlier value that is significantly larger than the rest of the data is added to a sample set, how will the mean and the median change?",  
-            "back": "The Mean will increase significantly (it is sensitive to extreme values because it sums them all up).\n\nThe Median will change very little or stay completely unchanged (it only cares about middle positional ranking)."  
-          },  
-          {  
-            "domain": "Math: Algebra",  
-            "front": "When multiplying or dividing both sides of an inequality by a negative number to solve for x, what critical step must be performed to keep the statement mathematically true?",  
-            "back": "You must flip the direction of the inequality sign (e.g., convert < to >).\n\nStrategy: This is the number one source of careless errors on grid-in or multiple-choice inequality questions. Do a quick mental check for negative operations."  
-          }  
-        ];  
-  
-        let currentIndex = 0;  
-        let isFlipped = false;  
-  
-        const cardInner = document.getElementById('card-inner');  
-        const frontText = document.getElementById('card-front-text');  
-        const backText = document.getElementById('card-back-text');  
-        const domainLabel = document.getElementById('card-domain');  
-        const indicator = document.getElementById('card-indicator');  
-        const prevBtn = document.getElementById('prev-btn');  
-        const nextBtn = document.getElementById('next-btn');  
-  
-        function renderContent() {  
-            const current = cards[currentIndex];  
-            frontText.textContent = current.front;  
-            backText.textContent = current.back;  
-            domainLabel.textContent = current.domain;  
-            indicator.textContent = `${currentIndex + 1} / ${cards.length}`;  
-              
-            prevBtn.disabled = currentIndex === 0;  
-            nextBtn.disabled = currentIndex === cards.length - 1;  
-        }  
-  
-        function updateCard() {  
-            if (isFlipped) {  
-                cardInner.classList.remove('rotate-y-180');  
-                isFlipped = false;  
-                setTimeout(renderContent, 250);  
-            } else {  
-                renderContent();  
-            }  
-        }  
-  
-        document.getElementById('flashcard').addEventListener('click', () => {  
-            isFlipped = !isFlipped;  
-            cardInner.classList.toggle('rotate-y-180', isFlipped);  
-        });  
-  
-        prevBtn.addEventListener('click', (e) => {  
-            e.stopPropagation();  
-            if (currentIndex > 0) { currentIndex--; updateCard(); }  
-        });  
-  
-        nextBtn.addEventListener('click', (e) => {  
-            e.stopPropagation();  
-            if (currentIndex < cards.length - 1) { currentIndex++; updateCard(); }  
-        });  
-  
-        renderContent();  
-    </script>  
-</body>  
-</html>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Conditioning Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #38bdf8;
+            --primary-hover: #7dd3fc;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-math: #34d399;
+            --accent-eng: #f43f5e;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        header {
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .flashcard-wrapper {
+            perspective: 1000px;
+            width: 100%;
+            height: 380px;
+            cursor: pointer;
+        }
+
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
+        }
+
+        .flashcard-wrapper.flipped .flashcard {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 2px solid var(--border);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-front {
+            background-color: var(--card-bg);
+        }
+
+        .card-back {
+            background-color: #1e293b;
+            transform: rotateY(180deg);
+            border-color: var(--primary);
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .tag.math { color: var(--accent-math); border: 1px solid rgba(52, 211, 153, 0.2); }
+        .tag.english { color: var(--accent-eng); border: 1px solid rgba(244, 63, 94, 0.2); }
+
+        .hint-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-content {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            font-weight: 500;
+            text-align: left;
+            overflow-y: auto;
+            margin: 1rem 0;
+            padding-right: 0.5rem;
+        }
+
+        .card-back .card-content {
+            font-size: 1.05rem;
+            color: #f1f5f9;
+        }
+
+        .nav-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        button {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.85rem 1rem;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--border);
+            border-color: var(--text-muted);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        button.action-btn {
+            background-color: var(--primary);
+            color: #000;
+            border: none;
+        }
+
+        button.action-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .status-msg {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .status-msg p { color: var(--text-muted); margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="app-title">Conditioning Dashboard</h1>
+        <div class="subtitle" id="app-subtitle">Syncing with active database...</div>
+    </header>
+
+    <div class="container">
+        <div class="progress-bar">
+            <span id="card-index-label">Card 0 of 0</span>
+            <span id="countdown-label">-- days to exam</span>
+        </div>
+
+        <div id="deck-viewport">
+            <div class="status-msg">
+                <p>Establishing secure handshake with storage layer...</p>
+            </div>
+        </div>
+
+        <div class="nav-layout">
+            <button id="prev-btn" disabled>&larr; Prev</button>
+            <button id="flip-btn" class="action-btn">Reveal Strategy</button>
+            <button id="next-btn" disabled>Next &rarr;</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION: PASTE YOUR CSV LINK HERE
+        // ==========================================
+        const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/pub?output=csv';
+        const EXAM_DATE = new Date('2026-06-06T00:00:00');
+
+        // State Machine
+        let masterDeck = [];
+        let currentCardIndex = 0;
+        let activeCycleDay = 1;
+
+        // Diagnostic Date Engine
+        function calculateTargetCycleDay() {
+            const now = new Date();
+            // Anchor start point to local time parameters
+            const anchorDate = new Date('2026-05-24T00:00:00'); 
+            const diffTime = now - anchorDate;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Map incrementally. Default to Day 1 if accessing prematurely.
+            return diffDays >= 0 ? diffDays + 1 : 1;
+        }
+
+        function updateGlobalMetadata() {
+            const now = new Date();
+            const timeRemaining = EXAM_DATE - now;
+            const daysRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
+            
+            const countdownEl = document.getElementById('countdown-label');
+            if (daysRemaining > 0) {
+                countdownEl.innerText = `${daysRemaining} days to exam`;
+            } else if (daysRemaining === 0) {
+                countdownEl.innerText = `Exam Day`;
+            } else {
+                countdownEl.innerText = `Cycle Concluded`;
+            }
+        }
+
+        // CSV String Parser
+        function parseCSV(text) {
+            const lines = [];
+            let row = [""];
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                let next = text[i+1];
+
+                if (c === '"') {
+                    if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+                    else { inQuotes = !inQuotes; }
+                } else if (c === ',' && !inQuotes) {
+                    row.push('');
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && next === '\n') { i++; }
+                    lines.push(row);
+                    row = [''];
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== '') lines.push(row);
+            return lines;
+        }
+
+        // App Initializer
+        async function fetchAndBuildDeck() {
+            updateGlobalMetadata();
+            activeCycleDay = calculateTargetCycleDay();
+            
+            try {
+                if (SHEET_CSV_URL.includes('PASTE_YOUR_PUBLISHED_CSV_URL_HERE')) {
+                    throw new Error("Configuration required: URL placeholder detected.");
+                }
+
+                const response = await fetch(SHEET_CSV_URL);
+                if (!response.ok) throw new Error("Network layer denied storage access.");
+                
+                const rawText = await response.text();
+                const cleanRows = parseCSV(rawText);
+                
+                if (cleanRows.length <= 1) throw new Error("Database returned an empty dataset.");
+
+                // Map row structure safely
+                const headers = cleanRows[0].map(h => h.trim().toLowerCase());
+                const dayIdx = headers.indexOf('day');
+                const domainIdx = headers.indexOf('domain');
+                const frontIdx = headers.indexOf('front');
+                const backIdx = headers.indexOf('back');
+
+                if (dayIdx === -1 || domainIdx === -1 || frontIdx === -1 || backIdx === -1) {
+                    throw new Error("Header validation failed. Check column layout labels.");
+                }
+
+                const parsedCards = [];
+                for (let i = 1; i < cleanRows.length; i++) {
+                    const r = cleanRows[i];
+                    if (r.length < 4 || !r[dayIdx]) continue;
+                    
+                    parsedCards.push({
+                        day: parseInt(r[dayIdx].trim(), 10),
+                        domain: r[domainIdx].trim(),
+                        front: r[frontIdx].trim(),
+                        back: r[backIdx].trim()
+                    });
+                }
+
+                // Filter data to only display items corresponding to current tracking increment
+                masterDeck = parsedCards.filter(c => c.day === activeCycleDay);
+
+                // Fallback loop logic if database contains fewer structural rows than expected
+                if (masterDeck.length === 0 && parsedCards.length > 0) {
+                    const maxAvailableDay = Math.max(...parsedCards.map(c => c.day));
+                    const loopedDay = ((activeCycleDay - 1) % maxAvailableDay) + 1;
+                    masterDeck = parsedCards.filter(c => c.day === loopedDay);
+                }
+
+                if (masterDeck.length === 0) throw new Error("No card components extracted.");
+
+                document.getElementById('app-title').innerText = `Conditioning Routine`;
+                document.getElementById('app-subtitle').innerText = `Target Execution Sequence: Day ${activeCycleDay}`;
+                
+                currentCardIndex = 0;
+                renderCard();
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('app-title').innerText = "System Standby";
+                document.getElementById('app-subtitle').innerText = "Data synchronization pending";
+                document.getElementById('deck-viewport').innerHTML = `
+                    <div class="status-msg">
+                        <h3 style="margin-bottom:0.5rem; color:var(--accent-eng)">Handshake Delayed</h3>
+                        <p>${err.message}</p>
+                        <p style="font-size:0.85rem; margin-top:1rem;">Verify that your runtime link points to a published Comma-Separated Values (.csv) document.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render Interface Elements
+        function renderCard() {
+            const viewport = document.getElementById('deck-viewport');
+            const card = masterDeck[currentCardIndex];
+            
+            const isMath = card.domain.toLowerCase().includes('math');
+            const typeClass = isMath ? 'math' : 'english';
+            const domainLabel = isMath ? 'Quant: Calibration' : 'EBRW: Information & Ideas';
+
+            viewport.innerHTML = `
+                <div class="flashcard-wrapper" id="card-wrapper" onclick="toggleCardFlip()">
+                    <div class="flashcard">
+                        <div class="card-face card-front">
+                            <div class="card-meta">
+                                <span class="tag ${typeClass}">${domainLabel}</span>
+                                <span class="hint-text">Tap to evaluate</span>
+                            </div>
+                            <div class="card-content">${card.front}</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">Focus Objective: Build conceptual speed & isolate traps.</div>
+                        </div>
+                        <div class="card-face card-back">
+                            <div class="card-meta">
+                                <span class="tag ${typeClass}">${card.domain}</span>
+                                <span class="hint-text">Strategy Engine</span>
+                            </div>
+                            <div class="card-content">${card.back}</div>
+                            <div style="font-size:0.75rem; color:var(--primary); font-weight:600; text-transform:uppercase;">Execution Checked &bull; Tap to Flip</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Adjust navigation control configurations
+            document.getElementById('card-index-label').innerText = `Card ${currentCardIndex + 1} of ${masterDeck.length}`;
+            document.getElementById('prev-btn').disabled = currentCardIndex === 0;
+            document.getElementById('next-btn').disabled = currentCardIndex === masterDeck.length - 1;
+            
+            resetFlipState();
+        }
+
+        // Flip Controls
+        function toggleCardFlip() {
+            const wrapper = document.getElementById('card-wrapper');
+            if (!wrapper) return;
+            
+            wrapper.classList.toggle('flipped');
+            
+            const flipBtn = document.getElementById('flip-btn');
+            if (wrapper.classList.contains('flipped')) {
+                flipBtn.innerText = "Show Metric Question";
+            } else {
+                flipBtn.innerText = "Reveal Strategy";
+            }
+        }
+
+        function resetFlipState() {
+            document.getElementById('flip-btn').innerText = "Reveal Strategy";
+        }
+
+        // Event Handling Attachments
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                renderCard();
+            }
+        });
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (currentCardIndex < masterDeck.length - 1) {
+                currentCardIndex++;
+                renderCard();
+            }
+        });
+
+        document.getElementById('flip-btn').addEventListener('click', toggleCardFlip);
+
+        // Execute Engine on initialization
+        window.addEventListener('DOMContentLoaded', fetchAndBuildDeck);
+    </script>
+</body>
+</html>
