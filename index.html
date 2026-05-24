@@ -68,7 +68,7 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
+            0 { transform: scale(1); }
             100% { transform: scale(1.05); }
         }
 
@@ -205,75 +205,72 @@
         <div id="feedback" class="feedback-box"></div>
     </div>
 
-    <div id="loading">Loading SAT Questions from Google Sheet...</div>
+    <div id="loading">Loading SAT Questions from Google Sheet securely...</div>
 
     <script>
-        // Updated CORS-Compliant Endpoint using Google Visualization API
-        const csvUrl = "https://docs.google.com/spreadsheets/d/1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/gviz/tq?tqx=out:csv";
-
         let questions = [];
         let currentIndex = 0;
         let timerInterval = null;
-        let timeLeft = 120; // 2 minutes in seconds
-        let appState = "answering"; // answering, submitted, timeout
+        let timeLeft = 120; // 2 minutes
+        let appState = "answering";
 
-        // Robust client-side RFC 4180 CSV Parser
-        function parseCSV(text) {
-            let lines = [];
-            let row = [""];
-            let inQuotes = false;
-
-            for (let i = 0; i < text.length; i++) {
-                let c = text[i];
-                let next = text[i+1];
-                if (c === '"') {
-                    if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
-                    else { inQuotes = !inQuotes; }
-                } else if (c === ',' && !inQuotes) {
-                    row.push('');
-                } else if ((c === '\r' || c === '\n') && !inQuotes) {
-                    if (c === '\r' && next === '\n') { i++; }
-                    lines.push(row);
-                    row = [''];
-                } else {
-                    row[row.length - 1] += c;
+        // Global namespace setup required by Google Visualization API when using JSONP scripts
+        var google = {
+            visualization: {
+                Query: {
+                    setResponse: function(response) {
+                        if (response.status === 'error') {
+                            document.getElementById('loading').innerText = "Data error: Check sheet permissions.";
+                            return;
+                        }
+                        processGoogleData(response.table);
+                    }
                 }
             }
-            if (row.length > 1 || row[0] !== '') lines.push(row);
+        };
+
+        // Inject data request directly into a safe Script element to drop cross-site limitations
+        function loadQuestionsViaJSONP() {
+            const sheetId = "1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-";
+            const jsonpUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:google.visualization.Query.setResponse`;
             
-            const headers = lines[0].map(h => h.trim().toLowerCase());
-            return lines.slice(1).map(line => {
-                let obj = {};
-                headers.forEach((header, index) => {
-                    obj[header] = line[index] ? line[index].trim() : "";
+            const script = document.createElement('script');
+            script.src = jsonpUrl;
+            script.onerror = function() {
+                document.getElementById('loading').innerText = "Failed to load spreadsheet. Ensure it is shared with 'Anyone with the link can view'.";
+            };
+            document.body.appendChild(script);
+        }
+
+        // Map the structural JSON response rows back to clear lowercase keys 
+        function processGoogleData(table) {
+            const headers = table.cols.map(col => (col.label || "").trim().toLowerCase());
+            
+            questions = table.rows.map(row => {
+                let item = {};
+                row.c.forEach((cell, index) => {
+                    const key = headers[index];
+                    if (key) {
+                        item[key] = cell && cell.v !== null ? String(cell.v).trim() : "";
+                    }
                 });
-                return obj;
+                return item;
             });
-        }
 
-        // Fetch Google Sheet safely across domains
-        async function loadQuestions() {
-            try {
-                const response = await fetch(csvUrl);
-                if (!response.ok) throw new Error("Network response error");
-                const csvText = await response.text();
-                questions = parseCSV(csvText);
-                
-                // Keep only structural rows
-                questions = questions.filter(q => q.question || q.question_text);
+            // Filter out any completely blank rows
+            questions = questions.filter(q => q.question || q.question_text);
 
-                if(questions.length === 0) throw new Error("Dataset structure blank or invalid.");
-                
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('quiz-card').style.display = 'block';
-                renderQuestion();
-            } catch (error) {
-                document.getElementById('loading').innerText = "Error loading dataset. Please check your sheet configurations.";
-                console.error(error);
+            if (questions.length === 0) {
+                document.getElementById('loading').innerText = "Columns found, but zero questions detected. Check header names match exactly.";
+                return;
             }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('quiz-card').style.display = 'block';
+            renderQuestion();
         }
 
-        // Timer Logic
+        // Timer Controller
         function startTimer() {
             clearInterval(timerInterval);
             timeLeft = 120; 
@@ -304,7 +301,7 @@
             document.getElementById('timer-display').innerText = `⏱️ ${minutes}:${seconds}`;
         }
 
-        // Render Cards
+        // Render Questions
         function renderQuestion() {
             appState = "answering";
             const q = questions[currentIndex];
@@ -352,7 +349,7 @@
             startTimer();
         }
 
-        // Submissions Evaluation
+        // Standard Evaluator
         function handleSubmission() {
             clearInterval(timerInterval);
             appState = "submitted";
@@ -365,7 +362,7 @@
             evaluateResults(userAnswer, correctAnswer, q.explanation);
         }
 
-        // Timeout Handling
+        // Clock Expiration
         function handleTimeout() {
             appState = "timeout";
             document.querySelectorAll('input[name="sat-option"]').forEach(input => input.disabled = true);
@@ -396,7 +393,7 @@
                 feedback.innerHTML = `<strong>Time's Up!</strong> The correct answer was ${correctAnswer}.`;
             } else if (userAnswer === correctAnswer) {
                 feedback.className = "feedback-box feedback-correct";
-                feedback.innerHTML = `<strong>Correct!</strong> Well done.`;
+                feedback.innerHTML = `<strong>Correct!</strong> Excellent tracking.`;
             } else {
                 feedback.className = "feedback-box feedback-incorrect";
                 feedback.innerHTML = `<strong>Incorrect.</strong> You chose ${userAnswer}. The correct answer was ${correctAnswer}.`;
@@ -425,7 +422,8 @@
             }
         });
 
-        loadQuestions();
+        // Start execution safely via script tagging
+        loadQuestionsViaJSONP();
     </script>
 </body>
 </html>
