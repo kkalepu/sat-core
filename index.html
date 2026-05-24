@@ -77,7 +77,6 @@
             border: 1px solid var(--border);
         }
 
-        /* FIXED: Removed fixed height, using dynamic flex layouts for rotation stability */
         .flashcard-wrapper {
             perspective: 1000px;
             width: 100%;
@@ -154,7 +153,6 @@
             letter-spacing: 0.05em;
         }
 
-        /* FIXED: Allowed text block to expand freely and push down footer notes */
         .card-content {
             font-size: 1.15rem;
             line-height: 1.55;
@@ -258,7 +256,7 @@
 
     <script>
         // ==========================================
-        // CONFIGURATION: PASTE YOUR CSV LINK HERE
+        // CONFIGURATION
         // ==========================================
         const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/pub?output=csv';
         const EXAM_DATE = new Date('2026-06-06T00:00:00');
@@ -267,18 +265,24 @@
         let currentCardIndex = 0;
         let activeCycleDay = 1;
 
+        // FIXED: Pure calendar day math calculation
         function calculateTargetCycleDay() {
             const now = new Date();
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const anchorDate = new Date('2026-05-24T00:00:00'); 
-            const diffTime = now - anchorDate;
+            
+            const diffTime = todayMidnight - anchorDate;
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             return diffDays >= 0 ? diffDays + 1 : 1;
         }
 
+        // FIXED: Stabilized countdown rounding architecture
         function updateGlobalMetadata() {
             const now = new Date();
-            const timeRemaining = EXAM_DATE - now;
-            const daysRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            const timeRemaining = EXAM_DATE - todayMidnight;
+            const daysRemaining = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
             
             const countdownEl = document.getElementById('countdown-label');
             if (daysRemaining > 0) {
