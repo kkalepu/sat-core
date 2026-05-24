@@ -119,7 +119,6 @@
             height: 18px;
         }
 
-        /* State Classes managed by JS */
         .option-label.selected {
             border-color: var(--primary);
             background-color: #eff6ff;
@@ -209,15 +208,16 @@
     <div id="loading">Loading SAT Questions from Google Sheet...</div>
 
     <script>
-        // Target CSV URL provided
-        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/pub?output=';
+        // Updated CORS-Compliant Endpoint using Google Visualization API
+        const csvUrl = "https://docs.google.com/spreadsheets/d/1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/gviz/tq?tqx=out:csv";
+
         let questions = [];
         let currentIndex = 0;
         let timerInterval = null;
         let timeLeft = 120; // 2 minutes in seconds
         let appState = "answering"; // answering, submitted, timeout
 
-        // --- CSV Parser Helper ---
+        // Robust client-side RFC 4180 CSV Parser
         function parseCSV(text) {
             let lines = [];
             let row = [""];
@@ -241,7 +241,6 @@
             }
             if (row.length > 1 || row[0] !== '') lines.push(row);
             
-            // Map headers to arrays of objects
             const headers = lines[0].map(h => h.trim().toLowerCase());
             return lines.slice(1).map(line => {
                 let obj = {};
@@ -252,28 +251,29 @@
             });
         }
 
-        // --- Fetch Data ---
+        // Fetch Google Sheet safely across domains
         async function loadQuestions() {
             try {
                 const response = await fetch(csvUrl);
+                if (!response.ok) throw new Error("Network response error");
                 const csvText = await response.text();
                 questions = parseCSV(csvText);
                 
-                // Filter out any blank rows
+                // Keep only structural rows
                 questions = questions.filter(q => q.question || q.question_text);
 
-                if(questions.length === 0) throw new Error("No valid questions found.");
+                if(questions.length === 0) throw new Error("Dataset structure blank or invalid.");
                 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('quiz-card').style.display = 'block';
                 renderQuestion();
             } catch (error) {
-                document.getElementById('loading').innerText = "Error loading dataset. Please check your sheet permissions.";
+                document.getElementById('loading').innerText = "Error loading dataset. Please check your sheet configurations.";
                 console.error(error);
             }
         }
 
-        // --- Timer Controller ---
+        // Timer Logic
         function startTimer() {
             clearInterval(timerInterval);
             timeLeft = 120; 
@@ -304,14 +304,13 @@
             document.getElementById('timer-display').innerText = `⏱️ ${minutes}:${seconds}`;
         }
 
-        // --- Render UI ---
+        // Render Cards
         function renderQuestion() {
             appState = "answering";
             const q = questions[currentIndex];
             
             document.getElementById('question-meta').innerText = `Question ${currentIndex + 1} of ${questions.length}`;
             
-            // Handle optional passage column
             const passageBox = document.getElementById('passage-container');
             if (q.passage && q.passage.trim() !== "") {
                 passageBox.innerText = q.passage;
@@ -320,13 +319,11 @@
                 passageBox.style.display = "none";
             }
 
-            // Fallback for varied header naming conventions
             document.getElementById('question-text').innerText = q.question || q.question_text;
 
             const container = document.getElementById('options-container');
             container.innerHTML = '';
 
-            // Render keys dynamically matching sheet names
             const optionsMap = { 'A': q.a, 'B': q.b, 'C': q.c, 'D': q.d };
             
             Object.keys(optionsMap).forEach(key => {
@@ -355,7 +352,7 @@
             startTimer();
         }
 
-        // --- Action Logic ---
+        // Submissions Evaluation
         function handleSubmission() {
             clearInterval(timerInterval);
             appState = "submitted";
@@ -368,9 +365,9 @@
             evaluateResults(userAnswer, correctAnswer, q.explanation);
         }
 
+        // Timeout Handling
         function handleTimeout() {
             appState = "timeout";
-            // Disable all radio buttons
             document.querySelectorAll('input[name="sat-option"]').forEach(input => input.disabled = true);
             
             const q = questions[currentIndex];
@@ -399,7 +396,7 @@
                 feedback.innerHTML = `<strong>Time's Up!</strong> The correct answer was ${correctAnswer}.`;
             } else if (userAnswer === correctAnswer) {
                 feedback.className = "feedback-box feedback-correct";
-                feedback.innerHTML = `<strong>Correct!</strong> Excellent pace.`;
+                feedback.innerHTML = `<strong>Correct!</strong> Well done.`;
             } else {
                 feedback.className = "feedback-box feedback-incorrect";
                 feedback.innerHTML = `<strong>Incorrect.</strong> You chose ${userAnswer}. The correct answer was ${correctAnswer}.`;
@@ -419,7 +416,6 @@
             }
         }
 
-        // Global Action Button routing
         document.getElementById('action-btn').addEventListener('click', () => {
             if (appState === "answering") {
                 handleSubmission();
@@ -429,7 +425,6 @@
             }
         });
 
-        // Initialize App
         loadQuestions();
     </script>
 </body>
