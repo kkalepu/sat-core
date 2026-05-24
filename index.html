@@ -15,6 +15,7 @@
             --accent-math: #34d399;
             --accent-eng: #f43f5e;
             --border: #334155;
+            --correct: #10b981;
         }
 
         * {
@@ -38,21 +39,21 @@
             width: 100%;
             max-width: 650px;
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 1rem;
+            padding-bottom: 0.75rem;
         }
 
         h1 {
-            font-size: 1.6rem;
+            font-size: 1.5rem;
             font-weight: 800;
             letter-spacing: -0.025em;
             color: var(--text-main);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .subtitle {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--text-muted);
             font-weight: 500;
         }
@@ -62,7 +63,7 @@
             max-width: 650px;
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            gap: 1rem;
         }
 
         .progress-bar {
@@ -77,11 +78,35 @@
             border: 1px solid var(--border);
         }
 
+        /* Live Pacing Timer Widget */
+        .timer-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+
+        .timer-critical {
+            color: var(--accent-eng) !important;
+            background: rgba(244, 63, 94, 0.1) !important;
+            border-color: rgba(244, 63, 94, 0.2) !important;
+            animation: pulse 1s infinite alternative;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
         .flashcard-wrapper {
             perspective: 1000px;
             width: 100%;
-            min-height: 420px;
-            cursor: pointer;
+            min-height: 460px;
             display: grid;
         }
 
@@ -103,10 +128,10 @@
             position: relative;
             grid-area: 1 / 1 / 2 / 2;
             width: 100%;
-            min-height: 420px;
+            min-height: 460px;
             backface-visibility: hidden;
             border-radius: 20px;
-            padding: 1.75rem;
+            padding: 1.5rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -129,7 +154,7 @@
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .tag {
@@ -154,16 +179,66 @@
         }
 
         .card-content {
-            font-size: 1.15rem;
-            line-height: 1.55;
+            font-size: 1.1rem;
+            line-height: 1.5;
             font-weight: 500;
             text-align: left;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             color: #f1f5f9;
         }
 
-        .card-back .card-content {
-            font-size: 1.05rem;
+        /* Answer Matrix Options Layout */
+        .options-matrix {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            width: 100%;
+        }
+
+        .option-row {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-align: left;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .option-row:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: var(--text-muted);
+        }
+
+        .option-badge {
+            background: var(--border);
+            color: var(--text-muted);
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .option-row.selected {
+            border-color: var(--primary);
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        .option-row.selected .option-badge {
+            background: var(--primary);
+            color: #000;
         }
 
         .card-footer-note {
@@ -171,7 +246,7 @@
             color: var(--text-muted); 
             font-weight: 500;
             border-top: 1px solid rgba(255,255,255,0.05);
-            padding-top: 0.75rem;
+            padding-top: 0.5rem;
             margin-top: auto;
         }
 
@@ -181,7 +256,6 @@
             align-items: center;
             gap: 0.75rem;
             width: 100%;
-            margin-top: 0.5rem;
         }
 
         button {
@@ -238,6 +312,10 @@
     <div class="container">
         <div class="progress-bar">
             <span id="card-index-label">Card 0 of 0</span>
+            <div class="timer-box" id="timer-container">
+                <span>⏱️</span>
+                <span id="timer-label">02:00</span>
+            </div>
             <span id="countdown-label">-- days to exam</span>
         </div>
 
@@ -260,12 +338,14 @@
         // ==========================================
         const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/pub?output=csv';
         const EXAM_DATE = new Date('2026-06-06T00:00:00');
+        const CARD_DURATION = 120; // 2 Minutes pacing allocation
 
         let masterDeck = [];
         let currentCardIndex = 0;
         let activeCycleDay = 1;
+        let timerInterval = null;
+        let secondsRemaining = CARD_DURATION;
 
-        // FIXED: Pure calendar day math calculation
         function calculateTargetCycleDay() {
             const now = new Date();
             const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -276,7 +356,6 @@
             return diffDays >= 0 ? diffDays + 1 : 1;
         }
 
-        // FIXED: Stabilized countdown rounding architecture
         function updateGlobalMetadata() {
             const now = new Date();
             const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -286,12 +365,41 @@
             
             const countdownEl = document.getElementById('countdown-label');
             if (daysRemaining > 0) {
-                countdownEl.innerText = `${daysRemaining} days to exam`;
+                countdownEl.innerText = `${daysRemaining}d out`;
             } else if (daysRemaining === 0) {
                 countdownEl.innerText = `Exam Day`;
             } else {
-                countdownEl.innerText = `Cycle Concluded`;
+                countdownEl.innerText = `Done`;
             }
+        }
+
+        // Active Stopwatch Engine
+        function startPacingTimer() {
+            clearInterval(timerInterval);
+            secondsRemaining = CARD_DURATION;
+            
+            const timerEl = document.getElementById('timer-label');
+            const containerEl = document.getElementById('timer-container');
+            
+            containerEl.classList.remove('timer-critical');
+            timerEl.innerText = "02:00";
+
+            timerInterval = setInterval(() => {
+                secondsRemaining--;
+                
+                let mins = Math.floor(secondsRemaining / 60);
+                let secs = secondsRemaining % 60;
+                
+                timerEl.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+                if (secondsRemaining <= 15) {
+                    containerEl.classList.add('timer-critical');
+                }
+
+                if (secondsRemaining <= 0) {
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
         }
 
         function parseCSV(text) {
@@ -325,17 +433,13 @@
             activeCycleDay = calculateTargetCycleDay();
             
             try {
-                if (SHEET_CSV_URL.includes('PASTE_YOUR_PUBLISHED_CSV_URL_HERE')) {
-                    throw new Error("Configuration required: URL placeholder detected.");
-                }
-
                 const response = await fetch(SHEET_CSV_URL);
-                if (!response.ok) throw new Error("Network layer denied storage access.");
+                if (!response.ok) throw new Error("Network layer denied access.");
                 
                 const rawText = await response.text();
                 const cleanRows = parseCSV(rawText);
                 
-                if (cleanRows.length <= 1) throw new Error("Database returned an empty dataset.");
+                if (cleanRows.length <= 1) throw new Error("Database is empty.");
 
                 const headers = cleanRows[0].map(h => h.trim().toLowerCase());
                 const dayIdx = headers.indexOf('day');
@@ -344,7 +448,7 @@
                 const backIdx = headers.indexOf('back');
 
                 if (dayIdx === -1 || domainIdx === -1 || frontIdx === -1 || backIdx === -1) {
-                    throw new Error("Header validation failed. Check column layout labels.");
+                    throw new Error("Header validation labels mismatch.");
                 }
 
                 const parsedCards = [];
@@ -368,7 +472,7 @@
                     masterDeck = parsedCards.filter(c => c.day === loopedDay);
                 }
 
-                if (masterDeck.length === 0) throw new Error("No card components extracted.");
+                if (masterDeck.length === 0) throw new Error("No items matched filter day criteria.");
 
                 document.getElementById('app-title').innerText = `Conditioning Routine`;
                 document.getElementById('app-subtitle').innerText = `Target Execution Sequence: Day ${activeCycleDay}`;
@@ -378,11 +482,9 @@
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('app-title').innerText = "System Standby";
-                document.getElementById('app-subtitle').innerText = "Data synchronization pending";
                 document.getElementById('deck-viewport').innerHTML = `
                     <div class="status-msg">
-                        <h3 style="margin-bottom:0.5rem; color:var(--accent-eng)">Handshake Delayed</h3>
+                        <h3 style="color:var(--accent-eng)">Sync Delayed</h3>
                         <p>${err.message}</p>
                     </div>
                 `;
@@ -398,20 +500,29 @@
             const domainLabel = isMath ? 'Quant: Calibration' : 'EBRW: Information & Ideas';
 
             viewport.innerHTML = `
-                <div class="flashcard-wrapper" id="card-wrapper" onclick="toggleCardFlip()">
+                <div class="flashcard-wrapper" id="card-wrapper">
                     <div class="flashcard">
-                        <div class="card-face card-front">
+                        <div class="card-face card-front" onclick="event.stopPropagation();">
                             <div class="card-meta">
                                 <span class="tag ${typeClass}">${domainLabel}</span>
-                                <span class="hint-text">Tap to evaluate</span>
+                                <span class="hint-text">Isolate Traps</span>
                             </div>
                             <div class="card-content">${card.front}</div>
-                            <div class="card-footer-note">Objective: Build conceptual processing speed & isolate traps.</div>
+                            
+                            <div class="options-matrix">
+                                <button class="option-row" onclick="selectAnswer(this, 'A')"><div class="option-badge">A</div>Eliminate / Confirm option</button>
+                                <button class="option-row" onclick="selectAnswer(this, 'B')"><div class="option-badge">B</div>Eliminate / Confirm option</button>
+                                <button class="option-row" onclick="selectAnswer(this, 'C')"><div class="option-badge">C</div>Eliminate / Confirm option</button>
+                                <button class="option-row" onclick="selectAnswer(this, 'D')"><div class="option-badge">D</div>Eliminate / Confirm option</button>
+                            </div>
+
+                            <div class="card-footer-note">Pacing Goal: Process target context under 120 seconds.</div>
                         </div>
-                        <div class="card-face card-back">
+                        
+                        <div class="card-face card-back" onclick="toggleCardFlip()">
                             <div class="card-meta">
                                 <span class="tag ${typeClass}">${card.domain}</span>
-                                <span class="hint-text">Strategy Engine</span>
+                                <span class="hint-text">Strategic Review</span>
                             </div>
                             <div class="card-content">${card.back}</div>
                             <div class="card-footer-note" style="color: var(--primary);">Execution Verified &bull; Tap to flip back</div>
@@ -425,6 +536,16 @@
             document.getElementById('next-btn').disabled = currentCardIndex === masterDeck.length - 1;
             
             resetFlipState();
+            startPacingTimer();
+        }
+
+        function selectAnswer(buttonElement, label) {
+            // Uncheck other rows inside this container view
+            const rows = buttonElement.parentElement.querySelectorAll('.option-row');
+            rows.forEach(r => r.classList.remove('selected'));
+            
+            // Toggle highlight on selected item
+            buttonElement.classList.add('selected');
         }
 
         function toggleCardFlip() {
@@ -436,6 +557,7 @@
             const flipBtn = document.getElementById('flip-btn');
             if (wrapper.classList.contains('flipped')) {
                 flipBtn.innerText = "Show Metric Question";
+                clearInterval(timerInterval); // Halt timer when reviewing strategy
             } else {
                 flipBtn.innerText = "Reveal Strategy";
             }
