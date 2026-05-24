@@ -64,7 +64,6 @@
             gap: 1rem;
         }
 
-        /* Top Bar Layout */
         .progress-bar {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
@@ -79,7 +78,6 @@
         .bar-left { text-align: left; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
         .bar-right { text-align: right; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
 
-        /* The Hardcoded 2-Minute Pacing Clock Widget */
         .timer-badge {
             display: flex;
             align-items: center;
@@ -99,10 +97,16 @@
             border-color: rgba(244, 63, 94, 0.4);
         }
 
-        /* Fluid Box Container - No Fixed Heights */
+        /* Timeout Warning Styling */
+        .timer-badge.expired {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            animation: none;
+        }
+
         .flashcard-wrapper {
             width: 100%;
-            cursor: pointer;
         }
 
         .flashcard {
@@ -156,7 +160,6 @@
             word-break: break-word;
         }
 
-        /* Option Selections Matrix */
         .options-matrix {
             display: flex;
             flex-direction: column;
@@ -181,7 +184,7 @@
             width: 100%;
         }
 
-        .option-row:hover {
+        .option-row:hover:not(.locked) {
             background: rgba(255, 255, 255, 0.06);
             border-color: var(--text-muted);
         }
@@ -208,6 +211,19 @@
         .option-row.selected .option-badge {
             background: var(--primary);
             color: #000;
+        }
+
+        /* Grayed out / Forced Lockdown State */
+        .option-row.locked {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(0, 0, 0, 0.1) !important;
+            border-color: var(--border) !important;
+        }
+
+        .option-row.locked.selected .option-badge {
+            background: var(--text-muted);
+            color: var(--bg-color);
         }
 
         .card-footer-note {
@@ -309,7 +325,7 @@
     <script>
         const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/pub?output=csv';
         const EXAM_DATE = new Date('2026-06-06T00:00:00');
-        const FIXED_DURATION = 120; // Hardcoded 2 Minutes Countdown per card
+        const FIXED_DURATION = 120; 
 
         let masterDeck = [];
         let currentCardIndex = 0;
@@ -317,6 +333,7 @@
         let countdownEngine = null;
         let timeRemainingSeconds = FIXED_DURATION;
         let showingStrategy = false;
+        let isExpired = false;
 
         function calculateTargetCycleDay() {
             const now = new Date();
@@ -334,15 +351,15 @@
             document.getElementById('countdown-label').innerText = daysRemaining > 0 ? `${daysRemaining}d out` : 'Exam';
         }
 
-        // Dedicated clock lifecycle wrapper
         function restartClockSystem() {
             clearInterval(countdownEngine);
             timeRemainingSeconds = FIXED_DURATION;
+            isExpired = false;
             
             const label = document.getElementById('clock-label');
             const widget = document.getElementById('clock-widget');
             
-            widget.classList.remove('critical');
+            widget.className = 'timer-badge'; 
             label.innerText = "02:00";
 
             countdownEngine = setInterval(() => {
@@ -352,9 +369,36 @@
                 let s = (timeRemainingSeconds % 60).toString().padStart(2, '0');
                 label.innerText = `${m}:${s}`;
 
-                if (timeRemainingSeconds <= 15) widget.classList.add('critical');
-                if (timeRemainingSeconds <= 0) clearInterval(countdownEngine);
+                if (timeRemainingSeconds <= 15 && timeRemainingSeconds > 0) {
+                    widget.classList.add('critical');
+                }
+
+                if (timeRemainingSeconds <= 0) {
+                    clearInterval(countdownEngine);
+                    executeLockdownProcedure();
+                }
             }, 1000);
+        }
+
+        // Hard Lockout Routine
+        function executeLockdownProcedure() {
+            isExpired = true;
+            const widget = document.getElementById('clock-widget');
+            const label = document.getElementById('clock-label');
+            
+            widget.className = 'timer-badge expired';
+            label.innerText = "00:00";
+
+            // Freeze every choice row element instantly
+            const rows = document.querySelectorAll('.option-row');
+            rows.forEach(r => {
+                r.classList.add('locked');
+            });
+
+            const footerField = document.getElementById('card-footer-text');
+            if (footerField) {
+                footerField.innerHTML = `<span style="color:#ef4444; font-weight:700;">⏱️ TIME EXPIRED. Selection window locked. Review execution strategy.</span>`;
+            }
         }
 
         function parseCSV(text) {
@@ -387,8 +431,16 @@
                 const cleanRows = parseCSV(rawText);
                 
                 const headers = cleanRows[0].map(h => h.trim().toLowerCase());
-                const dayIdx = headers.indexOf('day'), domainIdx = headers.indexOf('domain');
-                const frontIdx = headers.indexOf('front'), backIdx = headers.indexOf('back');
+                
+                // Mappings for old structure plus four explicit dynamic options
+                const dayIdx = headers.indexOf('day');
+                const domainIdx = headers.indexOf('domain');
+                const frontIdx = headers.indexOf('front');
+                const optAIdx = headers.indexOf('option a');
+                const optBIdx = headers.indexOf('option b');
+                const optCIdx = headers.indexOf('option c');
+                const optDIdx = headers.indexOf('option d');
+                const backIdx = headers.indexOf('back');
 
                 if (dayIdx === -1 || domainIdx === -1 || frontIdx === -1 || backIdx === -1) {
                     throw new Error("Column header mapping names mismatch.");
@@ -398,10 +450,15 @@
                 for (let i = 1; i < cleanRows.length; i++) {
                     const r = cleanRows[i];
                     if (r.length < 4 || !r[dayIdx]) continue;
+                    
                     parsedCards.push({
                         day: parseInt(r[dayIdx].trim(), 10),
                         domain: r[domainIdx].trim(),
                         front: r[frontIdx].trim(),
+                        optA: optAIdx !== -1 && r[optAIdx] ? r[optAIdx].trim() : 'Option A placeholder text',
+                        optB: optBIdx !== -1 && r[optBIdx] ? r[optBIdx].trim() : 'Option B placeholder text',
+                        optC: optCIdx !== -1 && r[optCIdx] ? r[optCIdx].trim() : 'Option C placeholder text',
+                        optD: optDIdx !== -1 && r[optDIdx] ? r[optDIdx].trim() : 'Option D placeholder text',
                         back: r[backIdx].trim()
                     });
                 }
@@ -445,10 +502,10 @@
                         <div class="card-content" id="card-main-string">${card.front}</div>
                         
                         <div class="options-matrix" id="interactive-matrix">
-                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">A</div>Option Choice A</div>
-                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">B</div>Option Choice B</div>
-                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">C</div>Option Choice C</div>
-                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">D</div>Option Choice D</div>
+                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">A</div><span class="opt-txt">${card.optA}</span></div>
+                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">B</div><span class="opt-txt">${card.optB}</span></div>
+                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">C</div><span class="opt-txt">${card.optC}</span></div>
+                            <div class="option-row" onclick="handleChoiceSelect(this)"><div class="option-badge">D</div><span class="opt-txt">${card.optD}</span></div>
                         </div>
 
                         <div class="card-footer-note" id="card-footer-text">Objective: Scan pattern context & flag variance mechanics.</div>
@@ -464,7 +521,9 @@
         }
 
         function handleChoiceSelect(element) {
-            if (showingStrategy) return; // Freeze selections during strategic evaluation review
+            // Drop click requests if the card is flipped or timer has reached zero
+            if (showingStrategy || isExpired || element.classList.contains('locked')) return; 
+            
             const siblings = element.parentElement.querySelectorAll('.option-row');
             siblings.forEach(s => s.classList.remove('selected'));
             element.classList.add('selected');
@@ -481,28 +540,34 @@
             const flipBtn = document.getElementById('flip-btn');
 
             if (!showingStrategy) {
-                // Flip to Strategic Assessment Mode
                 showingStrategy = true;
                 clearInterval(countdownEngine);
                 mainBox.classList.add('viewing-strategy');
                 stringField.innerHTML = card.back;
-                matrixZone.style.display = 'none'; // Clear options layout
+                matrixZone.style.display = 'none'; 
                 hintField.innerText = "Strategy Core";
                 tagField.innerText = card.domain;
                 footerField.innerText = "Execution Verified. Press button to return to metrics.";
                 flipBtn.innerText = "Show Metric Question";
             } else {
-                // Return to active testing metric mode
                 showingStrategy = false;
                 mainBox.classList.remove('viewing-strategy');
                 stringField.innerHTML = card.front;
-                matrixZone.style.display = 'flex'; // Remount options layout
+                matrixZone.style.display = 'flex'; 
                 hintField.innerText = "Isolate Traps";
                 const isMath = card.domain.toLowerCase().includes('math');
                 tagField.innerText = isMath ? 'Quant: Calibration' : 'EBRW: Information & Ideas';
-                footerField.innerText = "Objective: Scan pattern context & flag variance mechanics.";
+                
+                if (isExpired) {
+                    // Re-apply visual lockdown attributes if returning to an expired card
+                    const rows = matrixZone.querySelectorAll('.option-row');
+                    rows.forEach(r => r.classList.add('locked'));
+                    footerField.innerHTML = `<span style="color:#ef4444; font-weight:700;">⏱️ TIME EXPIRED. Selection window locked. Review execution strategy.</span>`;
+                } else {
+                    footerField.innerText = "Objective: Scan pattern context & flag variance mechanics.";
+                    restartClockSystem();
+                }
                 flipBtn.innerText = "Reveal Strategy";
-                restartClockSystem();
             }
         }
 
