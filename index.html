@@ -3,427 +3,460 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAT Conditioning App - Phase 1</title>
+    <title>SAT Conditioning Dashboard</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success: #16a34a;
-            --error: #dc2626;
-            --background: #f8fafc;
-            --surface: #ffffff;
-            --text: #1e293b;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #38bdf8;
+            --primary-hover: #7dd3fc;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-math: #34d399;
+            --accent-eng: #f43f5e;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
         }
 
-        .card {
-            background: var(--surface);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        header {
             width: 100%;
-            max-width: 600px;
-            padding: 30px;
-            box-sizing: border-box;
+            max-width: 650px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
         }
 
-        .header {
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .progress-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
         }
 
-        .metadata {
-            font-weight: 600;
-            color: #64748b;
+        /* FIXED: Removed fixed height, using dynamic flex layouts for rotation stability */
+        .flashcard-wrapper {
+            perspective: 1000px;
+            width: 100%;
+            min-height: 420px;
+            cursor: pointer;
+            display: grid;
         }
 
-        .timer-box {
-            background: #fee2e2;
-            color: var(--error);
-            padding: 6px 12px;
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 20px;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            display: grid;
         }
 
-        .timer-urgent {
-            animation: pulse 1s infinite alternate;
+        .flashcard-wrapper.flipped .flashcard {
+            transform: rotateY(180deg);
         }
 
-        @keyframes pulse {
-            0 { transform: scale(1); }
-            100% { transform: scale(1.05); }
-        }
-
-        .passage {
-            background: #f1f5f9;
-            padding: 15px;
-            border-left: 4px solid #94a3b8;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-style: italic;
-            white-space: pre-line;
-        }
-
-        .question {
-            font-size: 1.15rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-
-        .options-list {
+        .card-face {
+            position: relative;
+            grid-area: 1 / 1 / 2 / 2;
+            width: 100%;
+            min-height: 420px;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            padding: 1.75rem;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-bottom: 25px;
+            justify-content: space-between;
+            border: 2px solid var(--border);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
-        .option-label {
+        .card-front {
+            background-color: var(--card-bg);
+        }
+
+        .card-back {
+            background-color: #1e293b;
+            transform: rotateY(180deg);
+            border-color: var(--primary);
+        }
+
+        .card-meta {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            padding: 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .tag.math { color: var(--accent-math); border: 1px solid rgba(52, 211, 153, 0.2); }
+        .tag.english { color: var(--accent-eng); border: 1px solid rgba(244, 63, 94, 0.2); }
+
+        .hint-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* FIXED: Allowed text block to expand freely and push down footer notes */
+        .card-content {
+            font-size: 1.15rem;
+            line-height: 1.55;
+            font-weight: 500;
+            text-align: left;
+            margin-bottom: 1.5rem;
+            color: #f1f5f9;
+        }
+
+        .card-back .card-content {
+            font-size: 1.05rem;
+        }
+
+        .card-footer-note {
+            font-size: 0.75rem; 
+            color: var(--text-muted); 
+            font-weight: 500;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 0.75rem;
+            margin-top: auto;
+        }
+
+        .nav-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        button {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.85rem 0.5rem;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .option-label:hover {
-            background-color: #f8fafc;
-            border-color: #cbd5e1;
+        button:hover:not(:disabled) {
+            background-color: var(--border);
+            border-color: var(--text-muted);
         }
 
-        .option-label input {
-            margin-right: 12px;
-            accent-color: var(--primary);
-            width: 18px;
-            height: 18px;
-        }
-
-        .option-label.selected {
-            border-color: var(--primary);
-            background-color: #eff6ff;
-        }
-
-        .option-label.correct {
-            border-color: var(--success);
-            background-color: #f0fdf4;
-            color: var(--success);
-        }
-
-        .option-label.incorrect {
-            border-color: var(--error);
-            background-color: #fef2f2;
-            color: var(--error);
-        }
-
-        .btn {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            transition: background-color 0.2s;
-        }
-
-        .btn:hover {
-            background-color: var(--primary-hover);
-        }
-
-        .btn:disabled {
-            background-color: #cbd5e1;
+        button:disabled {
+            opacity: 0.3;
             cursor: not-allowed;
         }
 
-        .feedback-box {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 6px;
-            font-weight: 500;
-            display: none;
-            line-height: 1.4;
+        button.action-btn {
+            background-color: var(--primary);
+            color: #000;
+            border: none;
         }
 
-        .feedback-correct {
-            background-color: #f0fdf4;
-            border: 1px solid var(--success);
-            color: #15803d;
+        button.action-btn:hover {
+            background-color: var(--primary-hover);
         }
 
-        .feedback-incorrect {
-            background-color: #fef2f2;
-            border: 1px solid var(--error);
-            color: #b91c1c;
-        }
-
-        #loading {
+        .status-msg {
             text-align: center;
-            font-size: 1.2rem;
-            font-weight: 500;
+            padding: 3rem 1.5rem;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border);
         }
     </style>
 </head>
 <body>
 
-    <div class="card" id="quiz-card" style="display: none;">
-        <div class="header">
-            <div class="metadata" id="question-meta">Question 1</div>
-            <div class="timer-box" id="timer-display">⏱️ 02:00</div>
+    <header>
+        <h1 id="app-title">Conditioning Routine</h1>
+        <div class="subtitle" id="app-subtitle">Syncing with database...</div>
+    </header>
+
+    <div class="container">
+        <div class="progress-bar">
+            <span id="card-index-label">Card 0 of 0</span>
+            <span id="countdown-label">-- days to exam</span>
         </div>
 
-        <div id="passage-container" class="passage" style="display: none;"></div>
-        <div class="question" id="question-text">Loading question...</div>
-
-        <div class="options-list" id="options-container">
+        <div id="deck-viewport">
+            <div class="status-msg">
+                <p>Establishing secure handshake with storage layer...</p>
             </div>
+        </div>
 
-        <button id="action-btn" class="btn" disabled>Submit Answer</button>
-        
-        <div id="feedback" class="feedback-box"></div>
+        <div class="nav-layout">
+            <button id="prev-btn" disabled>&larr; Prev</button>
+            <button id="flip-btn" class="action-btn">Reveal Strategy</button>
+            <button id="next-btn" disabled>Next &rarr;</button>
+        </div>
     </div>
 
-    <div id="loading">Loading SAT Questions from Google Sheet securely...</div>
-
     <script>
-        let questions = [];
-        let currentIndex = 0;
-        let timerInterval = null;
-        let timeLeft = 120; // 2 minutes
-        let appState = "answering";
+        // ==========================================
+        // CONFIGURATION: PASTE YOUR CSV LINK HERE
+        // ==========================================
+        const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-/pub?output=csv';
+        const EXAM_DATE = new Date('2026-06-06T00:00:00');
 
-        // Global namespace setup required by Google Visualization API when using JSONP scripts
-        var google = {
-            visualization: {
-                Query: {
-                    setResponse: function(response) {
-                        if (response.status === 'error') {
-                            document.getElementById('loading').innerText = "Data error: Check sheet permissions.";
-                            return;
-                        }
-                        processGoogleData(response.table);
-                    }
-                }
-            }
-        };
+        let masterDeck = [];
+        let currentCardIndex = 0;
+        let activeCycleDay = 1;
 
-        // Inject data request directly into a safe Script element to drop cross-site limitations
-        function loadQuestionsViaJSONP() {
-            const sheetId = "1ILguhfA-x21gVWL_CrGRfebCEDfWJmZicYVVZ4bMkw8IuSz5kWJqNaIE5iuhmpU4JM0HAS3c2Ob-";
-            const jsonpUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:google.visualization.Query.setResponse`;
-            
-            const script = document.createElement('script');
-            script.src = jsonpUrl;
-            script.onerror = function() {
-                document.getElementById('loading').innerText = "Failed to load spreadsheet. Ensure it is shared with 'Anyone with the link can view'.";
-            };
-            document.body.appendChild(script);
+        function calculateTargetCycleDay() {
+            const now = new Date();
+            const anchorDate = new Date('2026-05-24T00:00:00'); 
+            const diffTime = now - anchorDate;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays >= 0 ? diffDays + 1 : 1;
         }
 
-        // Map the structural JSON response rows back to clear lowercase keys 
-        function processGoogleData(table) {
-            const headers = table.cols.map(col => (col.label || "").trim().toLowerCase());
+        function updateGlobalMetadata() {
+            const now = new Date();
+            const timeRemaining = EXAM_DATE - now;
+            const daysRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
             
-            questions = table.rows.map(row => {
-                let item = {};
-                row.c.forEach((cell, index) => {
-                    const key = headers[index];
-                    if (key) {
-                        item[key] = cell && cell.v !== null ? String(cell.v).trim() : "";
-                    }
-                });
-                return item;
-            });
-
-            // Filter out any completely blank rows
-            questions = questions.filter(q => q.question || q.question_text);
-
-            if (questions.length === 0) {
-                document.getElementById('loading').innerText = "Columns found, but zero questions detected. Check header names match exactly.";
-                return;
-            }
-
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('quiz-card').style.display = 'block';
-            renderQuestion();
-        }
-
-        // Timer Controller
-        function startTimer() {
-            clearInterval(timerInterval);
-            timeLeft = 120; 
-            updateTimerDisplay();
-            
-            const timerDisplay = document.getElementById('timer-display');
-            timerDisplay.classList.remove('timer-urgent');
-            timerDisplay.style.background = '#fee2e2';
-
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay();
-
-                if (timeLeft <= 15) {
-                    timerDisplay.classList.add('timer-urgent');
-                }
-
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    handleTimeout();
-                }
-            }, 1000);
-        }
-
-        function updateTimerDisplay() {
-            const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-            const seconds = (timeLeft % 60).toString().padStart(2, '0');
-            document.getElementById('timer-display').innerText = `⏱️ ${minutes}:${seconds}`;
-        }
-
-        // Render Questions
-        function renderQuestion() {
-            appState = "answering";
-            const q = questions[currentIndex];
-            
-            document.getElementById('question-meta').innerText = `Question ${currentIndex + 1} of ${questions.length}`;
-            
-            const passageBox = document.getElementById('passage-container');
-            if (q.passage && q.passage.trim() !== "") {
-                passageBox.innerText = q.passage;
-                passageBox.style.display = "block";
+            const countdownEl = document.getElementById('countdown-label');
+            if (daysRemaining > 0) {
+                countdownEl.innerText = `${daysRemaining} days to exam`;
+            } else if (daysRemaining === 0) {
+                countdownEl.innerText = `Exam Day`;
             } else {
-                passageBox.style.display = "none";
+                countdownEl.innerText = `Cycle Concluded`;
             }
+        }
 
-            document.getElementById('question-text').innerText = q.question || q.question_text;
+        function parseCSV(text) {
+            const lines = [];
+            let row = [""];
+            let inQuotes = false;
 
-            const container = document.getElementById('options-container');
-            container.innerHTML = '';
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                let next = text[i+1];
 
-            const optionsMap = { 'A': q.a, 'B': q.b, 'C': q.c, 'D': q.d };
+                if (c === '"') {
+                    if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+                    else { inQuotes = !inQuotes; }
+                } else if (c === ',' && !inQuotes) {
+                    row.push('');
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && next === '\n') { i++; }
+                    lines.push(row);
+                    row = [''];
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== '') lines.push(row);
+            return lines;
+        }
+
+        async function fetchAndBuildDeck() {
+            updateGlobalMetadata();
+            activeCycleDay = calculateTargetCycleDay();
             
-            Object.keys(optionsMap).forEach(key => {
-                const label = document.createElement('label');
-                label.className = 'option-label';
-                label.innerHTML = `
-                    <input type="radio" name="sat-option" value="${key}">
-                    <span><strong>${key}.</strong> ${optionsMap[key]}</span>
-                `;
+            try {
+                if (SHEET_CSV_URL.includes('PASTE_YOUR_PUBLISHED_CSV_URL_HERE')) {
+                    throw new Error("Configuration required: URL placeholder detected.");
+                }
+
+                const response = await fetch(SHEET_CSV_URL);
+                if (!response.ok) throw new Error("Network layer denied storage access.");
                 
-                label.querySelector('input').addEventListener('change', (e) => {
-                    if (appState !== "answering") return;
-                    document.querySelectorAll('.option-label').forEach(el => el.classList.remove('selected'));
-                    label.classList.add('selected');
-                    document.getElementById('action-btn').disabled = false;
-                });
+                const rawText = await response.text();
+                const cleanRows = parseCSV(rawText);
+                
+                if (cleanRows.length <= 1) throw new Error("Database returned an empty dataset.");
 
-                container.appendChild(label);
-            });
+                const headers = cleanRows[0].map(h => h.trim().toLowerCase());
+                const dayIdx = headers.indexOf('day');
+                const domainIdx = headers.indexOf('domain');
+                const frontIdx = headers.indexOf('front');
+                const backIdx = headers.indexOf('back');
 
-            document.getElementById('feedback').style.display = 'none';
-            const actionBtn = document.getElementById('action-btn');
-            actionBtn.innerText = "Submit Answer";
-            actionBtn.disabled = true;
-
-            startTimer();
-        }
-
-        // Standard Evaluator
-        function handleSubmission() {
-            clearInterval(timerInterval);
-            appState = "submitted";
-            
-            const selectedInput = document.querySelector('input[name="sat-option"]:checked');
-            const userAnswer = selectedInput.value;
-            const q = questions[currentIndex];
-            const correctAnswer = (q.correct_answer || q.answer || "").trim().toUpperCase();
-
-            evaluateResults(userAnswer, correctAnswer, q.explanation);
-        }
-
-        // Clock Expiration
-        function handleTimeout() {
-            appState = "timeout";
-            document.querySelectorAll('input[name="sat-option"]').forEach(input => input.disabled = true);
-            
-            const q = questions[currentIndex];
-            const correctAnswer = (q.correct_answer || q.answer || "").trim().toUpperCase();
-
-            evaluateResults(null, correctAnswer, q.explanation);
-        }
-
-        function evaluateResults(userAnswer, correctAnswer, explanationText) {
-            const labels = document.querySelectorAll('.option-label');
-            
-            labels.forEach(label => {
-                const val = label.querySelector('input').value;
-                if (val === correctAnswer) {
-                    label.classList.add('correct');
-                } else if (val === userAnswer && userAnswer !== correctAnswer) {
-                    label.classList.add('incorrect');
+                if (dayIdx === -1 || domainIdx === -1 || frontIdx === -1 || backIdx === -1) {
+                    throw new Error("Header validation failed. Check column layout labels.");
                 }
-            });
 
-            const feedback = document.getElementById('feedback');
-            feedback.style.display = 'block';
+                const parsedCards = [];
+                for (let i = 1; i < cleanRows.length; i++) {
+                    const r = cleanRows[i];
+                    if (r.length < 4 || !r[dayIdx]) continue;
+                    
+                    parsedCards.push({
+                        day: parseInt(r[dayIdx].trim(), 10),
+                        domain: r[domainIdx].trim(),
+                        front: r[frontIdx].trim(),
+                        back: r[backIdx].trim()
+                    });
+                }
 
-            if (userAnswer === null) {
-                feedback.className = "feedback-box feedback-incorrect";
-                feedback.innerHTML = `<strong>Time's Up!</strong> The correct answer was ${correctAnswer}.`;
-            } else if (userAnswer === correctAnswer) {
-                feedback.className = "feedback-box feedback-correct";
-                feedback.innerHTML = `<strong>Correct!</strong> Excellent tracking.`;
-            } else {
-                feedback.className = "feedback-box feedback-incorrect";
-                feedback.innerHTML = `<strong>Incorrect.</strong> You chose ${userAnswer}. The correct answer was ${correctAnswer}.`;
-            }
+                masterDeck = parsedCards.filter(c => c.day === activeCycleDay);
 
-            if(explanationText) {
-                feedback.innerHTML += `<br><br><small style="display:block; margin-top:5px; color:#475569;"><strong>Explanation:</strong> ${explanationText}</small>`;
-            }
+                if (masterDeck.length === 0 && parsedCards.length > 0) {
+                    const maxAvailableDay = Math.max(...parsedCards.map(c => c.day));
+                    const loopedDay = ((activeCycleDay - 1) % maxAvailableDay) + 1;
+                    masterDeck = parsedCards.filter(c => c.day === loopedDay);
+                }
 
-            const actionBtn = document.getElementById('action-btn');
-            if (currentIndex < questions.length - 1) {
-                actionBtn.innerText = "Next Question";
-                actionBtn.disabled = false;
-            } else {
-                actionBtn.innerText = "Practice Complete";
-                actionBtn.disabled = true;
+                if (masterDeck.length === 0) throw new Error("No card components extracted.");
+
+                document.getElementById('app-title').innerText = `Conditioning Routine`;
+                document.getElementById('app-subtitle').innerText = `Target Execution Sequence: Day ${activeCycleDay}`;
+                
+                currentCardIndex = 0;
+                renderCard();
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('app-title').innerText = "System Standby";
+                document.getElementById('app-subtitle').innerText = "Data synchronization pending";
+                document.getElementById('deck-viewport').innerHTML = `
+                    <div class="status-msg">
+                        <h3 style="margin-bottom:0.5rem; color:var(--accent-eng)">Handshake Delayed</h3>
+                        <p>${err.message}</p>
+                    </div>
+                `;
             }
         }
 
-        document.getElementById('action-btn').addEventListener('click', () => {
-            if (appState === "answering") {
-                handleSubmission();
-            } else if (appState === "submitted" || appState === "timeout") {
-                currentIndex++;
-                renderQuestion();
+        function renderCard() {
+            const viewport = document.getElementById('deck-viewport');
+            const card = masterDeck[currentCardIndex];
+            
+            const isMath = card.domain.toLowerCase().includes('math');
+            const typeClass = isMath ? 'math' : 'english';
+            const domainLabel = isMath ? 'Quant: Calibration' : 'EBRW: Information & Ideas';
+
+            viewport.innerHTML = `
+                <div class="flashcard-wrapper" id="card-wrapper" onclick="toggleCardFlip()">
+                    <div class="flashcard">
+                        <div class="card-face card-front">
+                            <div class="card-meta">
+                                <span class="tag ${typeClass}">${domainLabel}</span>
+                                <span class="hint-text">Tap to evaluate</span>
+                            </div>
+                            <div class="card-content">${card.front}</div>
+                            <div class="card-footer-note">Objective: Build conceptual processing speed & isolate traps.</div>
+                        </div>
+                        <div class="card-face card-back">
+                            <div class="card-meta">
+                                <span class="tag ${typeClass}">${card.domain}</span>
+                                <span class="hint-text">Strategy Engine</span>
+                            </div>
+                            <div class="card-content">${card.back}</div>
+                            <div class="card-footer-note" style="color: var(--primary);">Execution Verified &bull; Tap to flip back</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('card-index-label').innerText = `Card ${currentCardIndex + 1} of ${masterDeck.length}`;
+            document.getElementById('prev-btn').disabled = currentCardIndex === 0;
+            document.getElementById('next-btn').disabled = currentCardIndex === masterDeck.length - 1;
+            
+            resetFlipState();
+        }
+
+        function toggleCardFlip() {
+            const wrapper = document.getElementById('card-wrapper');
+            if (!wrapper) return;
+            
+            wrapper.classList.toggle('flipped');
+            
+            const flipBtn = document.getElementById('flip-btn');
+            if (wrapper.classList.contains('flipped')) {
+                flipBtn.innerText = "Show Metric Question";
+            } else {
+                flipBtn.innerText = "Reveal Strategy";
+            }
+        }
+
+        function resetFlipState() {
+            document.getElementById('flip-btn').innerText = "Reveal Strategy";
+        }
+
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                renderCard();
             }
         });
 
-        // Start execution safely via script tagging
-        loadQuestionsViaJSONP();
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (currentCardIndex < masterDeck.length - 1) {
+                currentCardIndex++;
+                renderCard();
+            }
+        });
+
+        document.getElementById('flip-btn').addEventListener('click', toggleCardFlip);
+        window.addEventListener('DOMContentLoaded', fetchAndBuildDeck);
     </script>
 </body>
 </html>
